@@ -59,6 +59,13 @@ func (dm *DeployManager) RemoveSession(id string) {
 	delete(dm.sessions, id)
 }
 
+// GetSession returns a session by ID, or nil if not found.
+func (dm *DeployManager) GetSession(id string) *DeploySession {
+	dm.mu.Lock()
+	defer dm.mu.Unlock()
+	return dm.sessions[id]
+}
+
 // Emit sends an event to the session's event channel.
 func (s *DeploySession) Emit(step, message, status string) {
 	select {

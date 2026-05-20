@@ -53,6 +53,7 @@ func (s *Server) registerRoutes() {
 				// Deploy
 				r.Post("/deploy/compose", s.handleDeployCompose)
 				r.Post("/deploy/stream", s.handleDeployStream)
+				r.Get("/deploy/stream/{deploy_id}", s.handleDeployStreamWS)
 				r.Post("/compose/stop", s.handleStopCompose)
 				r.Post("/compose/remove", s.handleRemoveCompose)
 
@@ -292,6 +293,59 @@ func (s *Server) handleDeployStream(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	writeJSON(w, http.StatusOK, map[string]any{"deploy_id": session.ID})
+}
+
+var wsUpgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+func (s *Server) handleDeployStreamWS(w http.ResponseWriter, r *http.Request) {
+	deployID := chi.URLParam(r, "deploy_id")
+	if deployID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "deploy_id required"})
+		return
+	}
+
+	session := s.deployMgr.GetSession(deployID)
+	if session == nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "session not found"})
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("[ERROR] WebSocket upgrade failed: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	for {
+		select {
+		case event, ok := <-session.Events:
+			if !ok {
+				// Channel closed, deployment done
+				return
+			}
+			if err := conn.WriteJSON(event); err != nil {
+				return
+			}
+		case <-session.Done:
+			// Drain remaining events
+			for {
+				select {
+				case event, ok := <-session.Events:
+					if !ok {
+						return
+					}
+					conn.WriteJSON(event)
+				default:
+					return
+				}
+			}
+		}
+	}
 }
 
 func (s *Server) handleStopCompose(w http.ResponseWriter, r *http.Request) {
