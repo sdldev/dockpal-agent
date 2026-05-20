@@ -1,0 +1,35 @@
+# VCS
+.git
+.gitignore
+.github
+
+# Docs / planning
+docs
+README.md
+*.md
+
+# Local / IDE
+.devin
+.idea
+.vscode
+*.swp
+*.swo
+
+# Local binaries (must not leak into build layer)
+dockpal-agent
+*.exe
+*.test
+
+# Env / secrets
+.env
+*.pem
+*.key
+*.crt
+
+# Test / coverage
+coverage.out
+coverage.html
+
+# OS
+.DS_Store
+Thumbs.db

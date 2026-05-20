@@ -95,7 +95,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // ensureCerts loads or auto-generates a self-signed TLS certificate.
 func ensureCerts(certDir string) (tls.Certificate, error) {
 	if certDir == "" {
-		certDir = "/etc/dockpal/agent/certs"
+		// Default to the agent state directory so certs persist across
+		// container restarts when the host mounts /opt/dockpal-agent.
+		certDir = "/opt/dockpal-agent/certs"
 	}
 
 	certFile := filepath.Join(certDir, "agent.crt")

@@ -6,18 +6,23 @@ The agent runs on each managed host and exposes the Docker daemon and host info 
 
 ## Quick Start
 
+The image is published to GitHub Container Registry: `ghcr.io/sdldev/dockpal-agent`.
+
 ### Direct Mode (host with public IP)
 
 ```bash
 docker run -d \
   --name dockpal-agent \
   --restart unless-stopped \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -p 9273:9273 \
   -e DOCKPAL_MODE=direct \
   -e DOCKPAL_TOKEN=agt-YOUR_TOKEN_HERE \
-  sdldev/dockpal-agent:latest
+  -p 9273:9273 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /opt/dockpal-agent:/opt/dockpal-agent \
+  ghcr.io/sdldev/dockpal-agent:latest
 ```
+
+The `/opt/dockpal-agent` mount persists compose files and the auto-generated TLS certificate across restarts.
 
 ### Edge Mode (host behind NAT)
 
@@ -25,11 +30,12 @@ docker run -d \
 docker run -d \
   --name dockpal-agent \
   --restart unless-stopped \
-  -v /var/run/docker.sock:/var/run/docker.sock \
   -e DOCKPAL_MODE=edge \
   -e DOCKPAL_EDGE_SERVER=wss://dockpal.example.com:3012 \
   -e DOCKPAL_TOKEN=agt-YOUR_TOKEN_HERE \
-  sdldev/dockpal-agent:latest
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /opt/dockpal-agent:/opt/dockpal-agent \
+  ghcr.io/sdldev/dockpal-agent:latest
 ```
 
 Note: Edge mode does **not** publish any port. The agent makes an outbound connection only.
@@ -42,7 +48,7 @@ Note: Edge mode does **not** publish any port. The agent makes an outbound conne
 | `DOCKPAL_TOKEN` | yes | — | Enrollment token from Server |
 | `DOCKPAL_DIRECT_LISTEN` | no | `:9273` | Listen address (direct mode) |
 | `DOCKPAL_DIRECT_TLS` | no | `true` | Enable TLS (direct mode) |
-| `DOCKPAL_TLS_CERT_DIR` | no | auto | Directory for TLS certs |
+| `DOCKPAL_TLS_CERT_DIR` | no | `/opt/dockpal-agent/certs` | Directory for TLS certs (auto-generated if missing) |
 | `DOCKPAL_EDGE_SERVER` | edge only | — | Server URL, e.g. `wss://dockpal.example.com:3012` |
 | `DOCKPAL_EDGE_RECONNECT` | no | `5s` | Reconnect interval on disconnect |
 | `DOCKPAL_EDGE_HEARTBEAT` | no | `30s` | Heartbeat ping interval |
@@ -96,8 +102,11 @@ All endpoints require `Authorization: Bearer <token>` (except `/agent/ping`).
 # Build binary
 go build -o dockpal-agent .
 
-# Build Docker image (multi-arch)
-docker buildx build --platform linux/amd64,linux/arm64 -t sdldev/dockpal-agent:latest .
+# Build Docker image — requires buildx
+docker buildx build \
+  --platform linux/amd64 \
+  --build-arg VERSION=dev \
+  -t ghcr.io/sdldev/dockpal-agent:latest .
 ```
 
 ## Security Notes

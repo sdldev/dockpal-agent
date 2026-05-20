@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,17 +21,20 @@ import (
 func main() {
 	if len(os.Args) >= 2 {
 		switch os.Args[1] {
-		case "version":
+		case "version", "--version", "-v":
 			fmt.Printf("dockpal-agent v%s\n", config.Version)
 			return
-		case "help":
+		case "healthcheck":
+			os.Exit(runHealthcheck())
+		case "help", "--help", "-h":
 			fmt.Println("DockPal Agent — Lightweight Docker proxy for remote management")
 			fmt.Println()
 			fmt.Println("Configuration via environment variables. See README.")
 			fmt.Println()
 			fmt.Println("Commands:")
-			fmt.Println("  version   Print agent version")
-			fmt.Println("  help      Show this help message")
+			fmt.Println("  version       Print agent version")
+			fmt.Println("  healthcheck   Probe local /agent/ping (used by Docker HEALTHCHECK)")
+			fmt.Println("  help          Show this help message")
 			return
 		}
 	}
@@ -89,6 +95,48 @@ func runDirect(ctx context.Context, cfg *config.Config, dockerClient *docker.Cli
 	case err := <-errCh:
 		log.Fatalf("Server error: %v", err)
 	}
+}
+
+// runHealthcheck probes the local /agent/ping endpoint, auto-detecting
+// scheme (http vs https) from DOCKPAL_DIRECT_TLS and the listen address
+// from DOCKPAL_DIRECT_LISTEN. Returns 0 on success, 1 otherwise.
+func runHealthcheck() int {
+	listen := os.Getenv("DOCKPAL_DIRECT_LISTEN")
+	if listen == "" {
+		listen = ":9273"
+	}
+	// Replace ":port" or "0.0.0.0:port" with localhost.
+	host := "127.0.0.1"
+	port := strings.TrimPrefix(listen, ":")
+	if idx := strings.LastIndex(listen, ":"); idx >= 0 && idx != 0 {
+		port = listen[idx+1:]
+	}
+
+	scheme := "https"
+	if v := strings.ToLower(os.Getenv("DOCKPAL_DIRECT_TLS")); v == "false" || v == "0" || v == "no" {
+		scheme = "http"
+	}
+
+	url := fmt.Sprintf("%s://%s:%s/agent/ping", scheme, host, port)
+
+	client := &http.Client{
+		Timeout: 4 * time.Second,
+		Transport: &http.Transport{
+			// Self-signed cert is expected in direct mode.
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "healthcheck: %v\n", err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintf(os.Stderr, "healthcheck: status %d\n", resp.StatusCode)
+		return 1
+	}
+	return 0
 }
 
 func runEdge(ctx context.Context, cfg *config.Config, dockerClient *docker.Client) {
