@@ -13,6 +13,7 @@ type ContainerInfo struct {
 	State   string                  `json:"state"`
 	Ports   []container.PortSummary `json:"ports"`
 	Created int64                   `json:"created"`
+	Labels  map[string]string       `json:"labels,omitempty"`
 }
 
 // ContainerDetail mirrors the Server's ContainerDetail for JSON compatibility.

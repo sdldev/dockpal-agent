@@ -50,6 +50,9 @@ func (s *Server) registerRoutes() {
 				r.Get("/containers/{id}/logs", s.handleContainerLogs)
 				r.Get("/containers/{id}/stats/ws", s.handleStatsStream)
 
+				// Apps
+				r.Get("/apps", s.handleListApps)
+
 				// Deploy
 				r.Post("/deploy/compose", s.handleDeployCompose)
 				r.Post("/deploy/stream", s.handleDeployStream)
@@ -376,6 +379,20 @@ func (s *Server) handleRemoveCompose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "removed"})
+}
+
+// --- App handlers ---
+
+func (s *Server) handleListApps(w http.ResponseWriter, r *http.Request) {
+	apps, err := s.docker.ListApps(r.Context())
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if apps == nil {
+		apps = []docker.AppSummary{}
+	}
+	writeJSON(w, http.StatusOK, apps)
 }
 
 // --- Image handlers ---

@@ -38,6 +38,7 @@ func (c *Client) ListContainers(ctx context.Context, all bool) ([]ContainerInfo,
 			State:   string(ctr.State),
 			Ports:   ctr.Ports,
 			Created: ctr.Created,
+			Labels:  ctr.Labels,
 		}
 	}
 	return containers, nil
