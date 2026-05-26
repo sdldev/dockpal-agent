@@ -72,6 +72,27 @@ func (c *Client) ListApps(ctx context.Context) ([]AppSummary, error) {
 	if err != nil {
 		return nil, err
 	}
+	composeContainers, err := c.ListContainersWithLabel(ctx, "com.docker.compose.project")
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool, len(containers)+len(composeContainers))
+	merged := make([]ContainerInfo, 0, len(containers)+len(composeContainers))
+	for _, ctr := range containers {
+		if ctr.ID == "" || seen[ctr.ID] {
+			continue
+		}
+		seen[ctr.ID] = true
+		merged = append(merged, ctr)
+	}
+	for _, ctr := range composeContainers {
+		if ctr.ID == "" || seen[ctr.ID] {
+			continue
+		}
+		seen[ctr.ID] = true
+		merged = append(merged, ctr)
+	}
+	containers = merged
 
 	type projectAccum struct {
 		name       string
@@ -82,6 +103,9 @@ func (c *Client) ListApps(ctx context.Context) ([]AppSummary, error) {
 	projects := make(map[string]*projectAccum)
 	for _, ctr := range containers {
 		project := ctr.Labels["dockpal.project"]
+		if project == "" {
+			project = ctr.Labels["com.docker.compose.project"]
+		}
 		if project == "" {
 			continue
 		}
@@ -96,6 +120,9 @@ func (c *Client) ListApps(ctx context.Context) ([]AppSummary, error) {
 		}
 
 		serviceName := ctr.Labels["dockpal.service"]
+		if serviceName == "" {
+			serviceName = ctr.Labels["com.docker.compose.service"]
+		}
 		if serviceName == "" {
 			serviceName = ctr.Name
 		}
