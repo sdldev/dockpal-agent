@@ -52,6 +52,8 @@ func (s *Server) registerRoutes() {
 
 				// Apps
 				r.Get("/apps", s.handleListApps)
+				r.Patch("/apps/{name}/auto-update", s.handleSetAppAutoUpdate)
+				r.Post("/apps/{name}/update", s.handleTriggerAppUpdate)
 
 				// Deploy
 				r.Post("/deploy/compose", s.handleDeployCompose)
