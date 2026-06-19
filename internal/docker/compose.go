@@ -49,6 +49,7 @@ type ComposeService struct {
 	Restart     string   `yaml:"restart,omitempty"`
 	Labels      any      `yaml:"labels,omitempty"`
 	Command     any      `yaml:"command,omitempty"`
+	Entrypoint  any      `yaml:"entrypoint,omitempty"`
 }
 
 // PortBinding represents a parsed port mapping.
@@ -331,11 +332,45 @@ func (c *Client) createAndStartService(ctx context.Context, projectName, svcName
 		restartPolicy = svc.Restart
 	}
 
+	// Resolve command: supports both string (shell form) and []any (exec form)
+	var cmd []string
+	switch v := svc.Command.(type) {
+	case string:
+		cmd = []string{"/bin/sh", "-c", v}
+	case []any:
+		cmd = make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				cmd = append(cmd, s)
+			}
+		}
+	}
+
+	// Resolve entrypoint: supports both string and []any
+	var entrypoint []string
+	switch v := svc.Entrypoint.(type) {
+	case string:
+		entrypoint = []string{"/bin/sh", "-c", v}
+	case []any:
+		entrypoint = make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				entrypoint = append(entrypoint, s)
+			}
+		}
+	}
+
 	containerConfig := &container.Config{
 		Labels:       svcLabels,
 		Env:          envVars,
 		ExposedPorts: exposedPorts,
 		Image:        svc.Image,
+	}
+	if len(cmd) > 0 {
+		containerConfig.Cmd = cmd
+	}
+	if len(entrypoint) > 0 {
+		containerConfig.Entrypoint = entrypoint
 	}
 
 	hostConfig := &container.HostConfig{
