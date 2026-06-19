@@ -6,15 +6,16 @@ import (
 
 // ContainerInfo mirrors the Server's ContainerInfo for JSON compatibility.
 type ContainerInfo struct {
-	ID       string                  `json:"id"`
-	Name     string                  `json:"name"`
-	Image    string                  `json:"image"`
-	Status   string                  `json:"status"`
-	State    string                  `json:"state"`
-	Ports    []container.PortSummary `json:"ports"`
-	Created  int64                   `json:"created"`
-	Networks map[string]string       `json:"networks,omitempty"`
-	Labels   map[string]string       `json:"labels,omitempty"`
+	ID            string                  `json:"id"`
+	Name          string                  `json:"name"`
+	Image         string                  `json:"image"`
+	Status        string                  `json:"status"`
+	State         string                  `json:"state"`
+	Ports         []container.PortSummary `json:"ports"`
+	Created       int64                   `json:"created"`
+	RestartPolicy string                  `json:"restart_policy,omitempty"`
+	Networks      map[string]string       `json:"networks,omitempty"`
+	Labels        map[string]string       `json:"labels,omitempty"`
 }
 
 // ContainerDetail mirrors the Server's ContainerDetail for JSON compatibility.

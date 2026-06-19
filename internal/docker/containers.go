@@ -30,22 +30,29 @@ func (c *Client) ListContainers(ctx context.Context, all bool) ([]ContainerInfo,
 				name = name[1:]
 			}
 		}
+		var restartPolicy string
 		networks := make(map[string]string)
-		if ctr.NetworkSettings != nil {
-			for netName, ep := range ctr.NetworkSettings.Networks {
-				networks[netName] = ep.IPAddress.String()
+		if inspect, err := c.cli.ContainerInspect(ctx, ctr.ID, client.ContainerInspectOptions{}); err == nil {
+			if inspect.Container.HostConfig != nil {
+				restartPolicy = string(inspect.Container.HostConfig.RestartPolicy.Name)
+			}
+			if inspect.Container.NetworkSettings != nil {
+				for netName, ep := range inspect.Container.NetworkSettings.Networks {
+					networks[netName] = ep.IPAddress.String()
+				}
 			}
 		}
 		containers[i] = ContainerInfo{
-			ID:       truncateID(ctr.ID, 12),
-			Name:     name,
-			Image:    ctr.Image,
-			Status:   ctr.Status,
-			State:    string(ctr.State),
-			Ports:    ctr.Ports,
-			Created:  ctr.Created,
-			Networks: networks,
-			Labels:   ctr.Labels,
+			ID:            truncateID(ctr.ID, 12),
+			Name:          name,
+			Image:         ctr.Image,
+			Status:        ctr.Status,
+			State:         string(ctr.State),
+			Ports:         ctr.Ports,
+			Created:       ctr.Created,
+			RestartPolicy: restartPolicy,
+			Networks:      networks,
+			Labels:        ctr.Labels,
 		}
 	}
 	return containers, nil
