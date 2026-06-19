@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/netip"
+	"strconv"
 	"strings"
 	"time"
 
@@ -101,6 +102,25 @@ func (c *Client) InspectContainer(ctx context.Context, id string) (*ContainerDet
 		}
 	}
 
+	// Collect port bindings from NetworkSettings
+	var ports []container.PortSummary
+	if ctr.NetworkSettings != nil {
+		for privatePort, bindings := range ctr.NetworkSettings.Ports {
+			for _, binding := range bindings {
+				hostPort, _ := strconv.Atoi(binding.HostPort)
+				privPort, _ := strconv.Atoi(privatePort.Port())
+				ports = append(ports, container.PortSummary{
+					PrivatePort: uint16(privPort),
+					PublicPort:  uint16(hostPort),
+					Type:        string(privatePort.Proto()),
+				})
+			}
+		}
+		if ports == nil {
+			ports = []container.PortSummary{}
+		}
+	}
+
 	info := &ContainerDetail{
 		ContainerInfo: ContainerInfo{
 			ID:      truncateID(ctr.ID, 12),
@@ -108,7 +128,7 @@ func (c *Client) InspectContainer(ctx context.Context, id string) (*ContainerDet
 			Image:   ctr.Config.Image,
 			Status:  status,
 			State:   status,
-			Ports:   []container.PortSummary{},
+			Ports:   ports,
 			Created: created,
 		},
 		Platform:      ctr.Platform,
