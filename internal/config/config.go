@@ -21,6 +21,7 @@ type Config struct {
 	EdgeReconnect time.Duration // Reconnect interval
 	EdgeHeartbeat time.Duration // Heartbeat ping interval
 	DockerSocket  string        // e.g. "/var/run/docker.sock"
+	ComposeDir    string        // Base dir for stack compose files (default /opt/dockpal-agent/compose)
 }
 
 // Load reads configuration from environment variables and validates required fields.
@@ -45,6 +46,7 @@ func Load() (*Config, error) {
 		EdgeReconnect: getEnvDuration("DOCKPAL_EDGE_RECONNECT", 5*time.Second),
 		EdgeHeartbeat: getEnvDuration("DOCKPAL_EDGE_HEARTBEAT", 30*time.Second),
 		DockerSocket:  getEnv("DOCKPAL_DOCKER_SOCKET", "/var/run/docker.sock"),
+		ComposeDir:    getEnv("DOCKPAL_COMPOSE_DIR", "/opt/dockpal-agent/compose"),
 	}
 
 	if mode == "edge" && cfg.EdgeServerURL == "" {

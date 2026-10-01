@@ -24,8 +24,13 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 # ---- Runtime ----
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates tzdata \
+# docker-cli + compose plugin: required for Dockge-style stack management
+# (the agent shells out to `docker compose` for stack lifecycle commands).
+RUN apk add --no-cache ca-certificates tzdata docker-cli docker-cli-compose \
  && addgroup -S dockpal || true
+
+# The compose CLI reads the socket from DOCKER_HOST (mounted docker.sock).
+ENV DOCKER_HOST=unix:///var/run/docker.sock
 
 COPY --from=builder /out/dockpal-agent /usr/local/bin/dockpal-agent
 

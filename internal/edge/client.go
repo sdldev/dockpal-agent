@@ -130,6 +130,11 @@ func (c *Client) handleRequest(ctx context.Context, msg AgentRequest) {
 	resp.RequestID = msg.RequestID
 
 	switch {
+	// Dockge-style compose stacks (see stacks.go)
+	case strings.HasPrefix(msg.Path, "/docker/stacks"):
+		c.handleStackRequest(ctx, msg)
+		return
+
 	// Containers
 	case msg.Path == "/docker/containers" && msg.Method == "GET":
 		all := msg.Query["all"] == "true"

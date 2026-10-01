@@ -62,6 +62,9 @@ func (s *Server) registerRoutes() {
 				r.Post("/compose/stop", s.handleStopCompose)
 				r.Post("/compose/remove", s.handleRemoveCompose)
 
+				// Dockge-style compose stacks
+				s.registerStackRoutes(r)
+
 				// Images
 				r.Get("/images", s.handleListImages)
 				r.Post("/images/pull", s.handlePullImage)

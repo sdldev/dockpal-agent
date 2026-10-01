@@ -17,7 +17,8 @@ import (
 
 // composeBasePath is the directory for storing compose files on the agent.
 // Different from the Server's path to avoid conflicts if both run on the same host.
-const composeBasePath = "/opt/dockpal-agent/compose"
+// Overridable (var, not const) so tests can point it at a temp directory.
+var composeBasePath = "/opt/dockpal-agent/compose"
 
 var projectNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`)
 

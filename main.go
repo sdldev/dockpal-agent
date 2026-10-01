@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sdldev/dockpal-agent/internal/composecli"
 	"github.com/sdldev/dockpal-agent/internal/config"
 	"github.com/sdldev/dockpal-agent/internal/docker"
 	"github.com/sdldev/dockpal-agent/internal/edge"
@@ -53,6 +54,11 @@ func main() {
 	if err := dockerClient.Ping(context.Background()); err != nil {
 		log.Fatalf("Docker daemon unreachable: %v", err)
 	}
+
+	// Wire the compose CLI backend for Dockge-style stack operations
+	// (used by both direct and edge modes).
+	composecli.Register()
+	docker.SetComposeBasePath(cfg.ComposeDir)
 
 	log.Printf("DockPal Agent v%s starting in %s mode", config.Version, cfg.Mode)
 
