@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      no-cache:
+        description: 'Disable build cache (use when Go build layer is stale)'
+        required: false
+        default: 'false'
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -74,8 +80,12 @@ jobs:
           platforms: linux/amd64
           build-args: |
             VERSION=${{ steps.version.outputs.value }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # The Go build layer is cached aggressively (mode=max). When source
+          # changed in ways the cache key missed (e.g. new route files), the
+          # image ships stale code — pass no-cache=true to force a clean build.
+          cache-from: ${{ github.event.inputs.no-cache == 'true' && '' || 'type=gha' }}
+          cache-to: ${{ github.event.inputs.no-cache == 'true' && '' || 'type=gha,mode=max' }}
+          no-cache: ${{ github.event.inputs.no-cache == 'true' }}
           provenance: mode=max
           sbom: true
 
