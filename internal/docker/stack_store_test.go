@@ -355,6 +355,9 @@ func TestLifecycleCommands(t *testing.T) {
 	if err := StackRestart(ctx, "demo"); err != nil {
 		t.Fatal(err)
 	}
+	if err := StackRecreate(ctx, "demo"); err != nil {
+		t.Fatal(err)
+	}
 	if err := StackDown(ctx, "demo"); err != nil {
 		t.Fatal(err)
 	}
@@ -367,15 +370,22 @@ func TestLifecycleCommands(t *testing.T) {
 	if err := StackServiceRestart(ctx, "demo", "web"); err != nil {
 		t.Fatal(err)
 	}
+	if err := StackServiceRecreate(ctx, "demo", "web"); err != nil {
+		t.Fatal(err)
+	}
 
 	want := [][]string{
 		{"up", "-d", "--remove-orphans"},
 		{"stop"},
 		{"restart"},
+		// dockpal issue #29 — recreate must force-recreate so compose config
+		// changes (network_mode, ports, ...) actually take effect.
+		{"up", "-d", "--remove-orphans", "--force-recreate"},
 		{"down"},
 		{"up", "-d", "web"},
 		{"stop", "web"},
 		{"restart", "web"},
+		{"up", "-d", "--force-recreate", "web"},
 	}
 	if len(fake.runs) != len(want) {
 		t.Fatalf("runs: %v", fake.runs)

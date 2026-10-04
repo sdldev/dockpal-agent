@@ -30,7 +30,7 @@ func (s *Server) registerStackRoutes(r chi.Router) {
 	r.Post("/stacks/{name}/deploy", s.handleDeployStack)
 	r.Get("/stacks/deploy/stream/{deploy_id}", s.handleStackDeployStreamWS)
 
-	for _, action := range []string{"up", "start", "stop", "restart", "down", "update"} {
+	for _, action := range []string{"up", "start", "stop", "restart", "recreate", "down", "update"} {
 		action := action
 		r.Post("/stacks/{name}/"+action, func(w http.ResponseWriter, req *http.Request) {
 			s.handleStackAction(w, req, action)
@@ -45,6 +45,9 @@ func (s *Server) registerStackRoutes(r chi.Router) {
 	})
 	r.Post("/stacks/{name}/services/{service}/restart", func(w http.ResponseWriter, req *http.Request) {
 		s.handleStackServiceAction(w, req, "restart")
+	})
+	r.Post("/stacks/{name}/services/{service}/recreate", func(w http.ResponseWriter, req *http.Request) {
+		s.handleStackServiceAction(w, req, "recreate")
 	})
 }
 
@@ -289,6 +292,8 @@ func (s *Server) handleStackAction(w http.ResponseWriter, r *http.Request, actio
 		err = docker.StackStop(ctx, name)
 	case "restart":
 		err = docker.StackRestart(ctx, name)
+	case "recreate":
+		err = docker.StackRecreate(ctx, name)
 	case "down":
 		err = docker.StackDown(ctx, name)
 	case "update":
@@ -330,6 +335,8 @@ func (s *Server) handleStackServiceAction(w http.ResponseWriter, r *http.Request
 		err = docker.StackServiceStop(ctx, name, service)
 	case "restart":
 		err = docker.StackServiceRestart(ctx, name, service)
+	case "recreate":
+		err = docker.StackServiceRecreate(ctx, name, service)
 	default:
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "unknown action"})
 		return
