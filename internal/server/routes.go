@@ -49,6 +49,7 @@ func (s *Server) registerRoutes() {
 				r.Get("/containers/{id}/stats", s.handleGetContainerStats)
 				r.Get("/containers/{id}/logs", s.handleContainerLogs)
 				r.Get("/containers/{id}/stats/ws", s.handleStatsStream)
+				r.Post("/containers/{id}/exec", s.handleContainerExec)
 
 				// Apps
 				r.Get("/apps", s.handleListApps)
@@ -161,6 +162,32 @@ func (s *Server) handleEditContainer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "updated", "container": detail})
+}
+
+// handleContainerExec runs a one-shot non-interactive command inside a
+// container and returns its captured output and exit code. The command must
+// finish on its own — no TTY, no stdin — so timeouts are bounded and the
+// request/response edge transport can carry the result as a single response.
+func (s *Server) handleContainerExec(w http.ResponseWriter, r *http.Request) {
+	var req docker.ExecRequest
+	if err := readJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if len(req.Cmd) == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "cmd is required"})
+		return
+	}
+	result, err := s.docker.ExecCommand(r.Context(), chi.URLParam(r, "id"), req)
+	if err != nil {
+		if strings.Contains(err.Error(), "is not running") || strings.Contains(err.Error(), "No such container") {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+			return
+		}
+		internalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, result)
 }
 
 func (s *Server) handleGetContainerStats(w http.ResponseWriter, r *http.Request) {
