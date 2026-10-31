@@ -3,7 +3,7 @@ module github.com/sdldev/dockpal-agent
 go 1.25.0
 
 require (
-	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/moby/moby/api v1.54.2
 	github.com/moby/moby/client v0.4.1
